@@ -1,0 +1,291 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using System.Text.RegularExpressions
+@using NewsAggregator.Data
+@using NewsAggregator.Models
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+@attribute [Authorize]
+
+<PageTitle>Главная</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        
+        <!-- ЛЕВАЯ КОЛОНКА: Меню -->
+        <div class="col-md-3 mb-4">
+            <div class="list-group mb-4">
+                <button class="list-group-item list-group-item-action @(currentMode == FeedMode.MyFeed ? "active" : "")" 
+                        @onclick="() => SetMode(FeedMode.MyFeed)">
+                    ❤️ Моя лента
+                </button>
+                <button class="list-group-item list-group-item-action @(currentMode == FeedMode.AllNews ? "active" : "")" 
+                        @onclick="() => SetMode(FeedMode.AllNews)">
+                    🌍 Все новости
+                </button>
+            </div>
+
+            <h5 class="text-muted">Источники</h5>
+            <div class="list-group">
+                @foreach (var src in sources)
+                {
+                    <button class="list-group-item list-group-item-action @(currentMode == FeedMode.BySource && selectedSourceId == src.Id ? "active" : "")"
+                            @onclick="() => FilterBySource(src.Id)">
+                        @src.Name
+                    </button>
+                }
+            </div>
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА: Лента новостей -->
+        <div class="col-md-9">
+            
+            <!-- Верхняя панель -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>@GetTitle()</h3>
+                <button class="btn btn-outline-primary" @onclick="() => showCategoryModal = true">
+                    📂 Выбрать категорию
+                </button>
+            </div>
+
+            @if (currentMode == FeedMode.MyFeed && myInterestIds.Count == 0)
+            {
+                <div class="alert alert-warning">
+                    У вас пока нет интересов. <a href="settings">Перейдите в настройки</a>, чтобы выбрать категории!
+                </div>
+            }
+
+            @if (articles == null)
+            {
+                <p><em>Загрузка новостей...</em></p>
+            }
+            else if (articles.Count == 0)
+            {
+                <div class="alert alert-info">
+                    Новостей пока нет.
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    @foreach (var item in articles)
+                    {
+                        // Обрабатываем HTML один раз
+                        var imgUrl = GetImageUrl(item.Description);
+                        var cleanDesc = GetCleanDescription(item.Description);
+
+                        <div class="col-md-12 mb-4"> <!-- Карточка новости -->
+                            <div class="card h-100 shadow-sm">
+                                <div class="row g-0">
+                                    <!-- Если есть картинка, показываем слева или сверху -->
+                                    @if (!string.IsNullOrEmpty(imgUrl))
+                                    {
+                                        <div class="col-md-4">
+                                            <img src="@imgUrl" class="img-fluid rounded-start" style="width: 100%; height: 200px; object-fit: cover;" alt="News Image">
+                                        </div>
+                                    }
+                                    
+                                    <div class="@(!string.IsNullOrEmpty(imgUrl) ? "col-md-8" : "col-md-12")">
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                <a href="@item.Link" target="_blank" class="text-decoration-none text-dark">@item.Title</a>
+                                            </h5>
+                                            <h6 class="card-subtitle mb-2 text-muted">
+                                                @item.Source?.Name 
+                                                @if(item.Category != null)
+                                                {
+                                                    <span class="badge bg-secondary ms-2">@item.Category.Name</span>
+                                                }
+                                                <small class="ms-2">@item.PublishedDate.ToLocalTime().ToString("g")</small>
+                                            </h6>
+                                            
+                                            <!-- Очищенное описание -->
+                                            <p class="card-text">
+                                                @if (cleanDesc.Length > 200)
+                                                {
+                                                    @cleanDesc.Substring(0, 200) <span>...</span>
+                                                }
+                                                else
+                                                {
+                                                    @cleanDesc
+                                                }
+                                            </p>
+                                            
+                                            <a href="@item.Link" target="_blank" class="btn btn-primary btn-sm">Читать далее →</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО КАТЕГОРИЙ -->
+@if (showCategoryModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Выберите категорию</h5>
+                    <button type="button" class="btn-close" @onclick="() => showCategoryModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var cat in allCategories)
+                        {
+                            <button class="btn btn-outline-secondary @(currentMode == FeedMode.ByCategory && selectedCategoryId == cat.Id ? "active" : "")"
+                                    @onclick="() => FilterByCategory(cat)">
+                                @cat.Name
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showCategoryModal = false">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private enum FeedMode { MyFeed, AllNews, BySource, ByCategory }
+
+    private FeedMode currentMode = FeedMode.MyFeed;
+    private List<Article> articles;
+    private List<Source> sources = new();
+    private List<Category> allCategories = new();
+    
+    private int selectedSourceId;
+    private int selectedCategoryId;
+    private string selectedCategoryName = "";
+    private HashSet<int> myInterestIds = new();
+    private string currentUserId;
+    private bool showCategoryModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value ?? "";
+
+        await LoadInitialData();
+        // Если интересов нет, сразу показываем ВСЕ новости, чтобы не было пусто
+        if (myInterestIds.Count == 0)
+        {
+            currentMode = FeedMode.AllNews;
+        }
+        await LoadNews();
+    }
+
+    private async Task LoadInitialData()
+    {
+        using var context = DbFactory.CreateDbContext();
+        sources = await context.Sources.ToListAsync();
+        allCategories = await context.Categories.OrderBy(c => c.Name).ToListAsync();
+        
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            myInterestIds = (await context.UserInterests
+                .Where(ui => ui.UserId == currentUserId)
+                .Select(ui => ui.CategoryId)
+                .ToListAsync())
+                .ToHashSet();
+        }
+    }
+
+    private async Task SetMode(FeedMode mode)
+    {
+        currentMode = mode;
+        await LoadNews();
+    }
+
+    private async Task FilterBySource(int sourceId)
+    {
+        currentMode = FeedMode.BySource;
+        selectedSourceId = sourceId;
+        await LoadNews();
+    }
+
+    private async Task FilterByCategory(Category cat)
+    {
+        currentMode = FeedMode.ByCategory;
+        selectedCategoryId = cat.Id;
+        selectedCategoryName = cat.Name;
+        showCategoryModal = false; 
+        await LoadNews();
+    }
+
+    private async Task LoadNews()
+    {
+        using var context = DbFactory.CreateDbContext();
+        IQueryable<Article> query = context.Articles
+            .Include(a => a.Source)
+            .Include(a => a.Category)
+            .OrderByDescending(a => a.PublishedDate);
+
+        switch (currentMode)
+        {
+            case FeedMode.MyFeed:
+                if (myInterestIds.Any())
+                    query = query.Where(a => a.CategoryId.HasValue && myInterestIds.Contains(a.CategoryId.Value));
+                else
+                    query = query.Where(a => false); // Пустой результат
+                break;
+
+            case FeedMode.AllNews:
+                break;
+
+            case FeedMode.BySource:
+                query = query.Where(a => a.SourceId == selectedSourceId);
+                break;
+
+            case FeedMode.ByCategory:
+                query = query.Where(a => a.CategoryId == selectedCategoryId);
+                break;
+        }
+
+        articles = await query.Take(50).ToListAsync();
+    }
+
+    // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ ОЧИСТКИ HTML ---
+
+    // Вытаскиваем ссылку на картинку из HTML-текста с помощью Regex
+    private string GetImageUrl(string htmlDescription)
+    {
+        if (string.IsNullOrEmpty(htmlDescription)) return null;
+        var match = Regex.Match(htmlDescription, "<img.+?src=[\"'](.+?)[\"'].*?>", RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    // Удаляем все HTML теги, чтобы остался только чистый текст
+    private string GetCleanDescription(string htmlDescription)
+    {
+        if (string.IsNullOrEmpty(htmlDescription)) return "";
+        // Заменяем <br> на пробелы
+        var text = htmlDescription.Replace("<br>", " ").Replace("<br/>", " ");
+        // Удаляем теги
+        return Regex.Replace(text, "<.*?>", string.Empty);
+    }
+
+    private string GetTitle()
+    {
+        return currentMode switch
+        {
+            FeedMode.MyFeed => "❤️ Моя лента",
+            FeedMode.AllNews => "🌍 Все новости",
+            FeedMode.BySource => $"Источник: {sources.FirstOrDefault(s => s.Id == selectedSourceId)?.Name}",
+            FeedMode.ByCategory => $"Категория: {selectedCategoryName}",
+            _ => "Новости"
+        };
+    }
+}
