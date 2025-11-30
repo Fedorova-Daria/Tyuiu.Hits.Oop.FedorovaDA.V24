@@ -38,13 +38,10 @@ namespace Tyuiu.Hits.Oop.FedorovaDA.V24
             builder.Services.AddScoped<ApplicationDbContext>(p =>
                 p.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext());
 
-            // -------------------------------------
-
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             builder.Services.AddIdentityCore<ApplicationUser>(options =>
             {
-                // Упростим настройки для локальной разработки
                 options.SignIn.RequireConfirmedAccount = false;
                 options.Password.RequireDigit = false;
                 options.Password.RequiredLength = 4;
@@ -54,18 +51,14 @@ namespace Tyuiu.Hits.Oop.FedorovaDA.V24
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
 
-            // --- ИСПРАВЛЕНИЕ ОШИБКИ С EMAIL SENDER ---
-            // Вместо глючного IdentityNoOpEmailSender используем свою простую заглушку
             builder.Services.AddSingleton<IEmailSender<ApplicationUser>, DummyEmailSender>();
 
-            // --- НЕ ЗАБУДЬ ПОДКЛЮЧИТЬ СЕРВИС НОВОСТЕЙ ---
             builder.Services.AddSingleton<NewsBackgroundService>();
             builder.Services.AddHostedService(sp => sp.GetRequiredService<NewsBackgroundService>());
 
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseMigrationsEndPoint();
@@ -86,21 +79,10 @@ namespace Tyuiu.Hits.Oop.FedorovaDA.V24
 
             app.MapAdditionalIdentityEndpoints();
 
-            // --- АВТОМАТИЧЕСКАЯ ИНИЦИАЛИЗАЦИЯ БАЗЫ (ОПЦИОНАЛЬНО) ---
-            // Чтобы при первом запуске база создалась сама без Add-Migration
-            /*
-            using (var scope = app.Services.CreateScope())
-            {
-                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                 db.Database.EnsureCreated();
-            }
-            */
-
             app.Run();
         }
     }
 
-    // --- КЛАСС-ЗАГЛУШКА ДЛЯ EMAIL (Чтобы не было ошибок типов) ---
     public class DummyEmailSender : IEmailSender<ApplicationUser>
     {
         public Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink) => Task.CompletedTask;

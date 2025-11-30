@@ -75,14 +75,12 @@
                 <div class="row">
                     @foreach (var item in articles)
                     {
-                        // Обрабатываем HTML один раз
                         var imgUrl = GetImageUrl(item.Description);
                         var cleanDesc = GetCleanDescription(item.Description);
 
                         <div class="col-md-12 mb-4"> <!-- Карточка новости -->
                             <div class="card h-100 shadow-sm">
                                 <div class="row g-0">
-                                    <!-- Если есть картинка, показываем слева или сверху -->
                                     @if (!string.IsNullOrEmpty(imgUrl))
                                     {
                                         <div class="col-md-4">
@@ -104,7 +102,6 @@
                                                 <small class="ms-2">@item.PublishedDate.ToLocalTime().ToString("g")</small>
                                             </h6>
                                             
-                                            <!-- Очищенное описание -->
                                             <p class="card-text">
                                                 @if (cleanDesc.Length > 200)
                                                 {
@@ -239,7 +236,7 @@
                 if (myInterestIds.Any())
                     query = query.Where(a => a.CategoryId.HasValue && myInterestIds.Contains(a.CategoryId.Value));
                 else
-                    query = query.Where(a => false); // Пустой результат
+                    query = query.Where(a => false);
                 break;
 
             case FeedMode.AllNews:
@@ -257,9 +254,6 @@
         articles = await query.Take(50).ToListAsync();
     }
 
-    // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ ОЧИСТКИ HTML ---
-
-    // Вытаскиваем ссылку на картинку из HTML-текста с помощью Regex
     private string GetImageUrl(string htmlDescription)
     {
         if (string.IsNullOrEmpty(htmlDescription)) return null;
@@ -267,13 +261,10 @@
         return match.Success ? match.Groups[1].Value : null;
     }
 
-    // Удаляем все HTML теги, чтобы остался только чистый текст
     private string GetCleanDescription(string htmlDescription)
     {
         if (string.IsNullOrEmpty(htmlDescription)) return "";
-        // Заменяем <br> на пробелы
         var text = htmlDescription.Replace("<br>", " ").Replace("<br/>", " ");
-        // Удаляем теги
         return Regex.Replace(text, "<.*?>", string.Empty);
     }
 

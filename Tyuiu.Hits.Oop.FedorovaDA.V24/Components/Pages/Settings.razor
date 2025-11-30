@@ -61,7 +61,6 @@
                             </div>
                         }
 
-                        <!-- Отдельная группа для "сиротливых" категорий (если вдруг такие будут) -->
                         @if (orphanCategories.Any())
                         {
                             <div class="accordion-item">
@@ -90,7 +89,6 @@
             </div>
         </div>
 
-        <!-- ПРАВАЯ КОЛОНКА: Добавление источника -->
         <div class="col-md-5">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
@@ -122,7 +120,7 @@
 @code {
     // Группировка: Имя Источника -> Список Категорий
     private Dictionary<string, List<Category>> sourceCategories = new();
-    private List<Category> orphanCategories = new(); // Те, у которых нет статей (пока)
+    private List<Category> orphanCategories = new(); 
 
     private HashSet<int> myInterestIds = new();
     private Source newSource = new();
@@ -139,13 +137,13 @@
     {
         using var context = DbFactory.CreateDbContext();
 
-        // 1. Загружаем все источники
+        // Загружаем все источники
         var sources = await context.Sources.ToListAsync();
 
-        // 2. Загружаем категории
+        // Загружаем категории
         var allCats = await context.Categories.ToListAsync();
 
-        // 3. Хитрая группировка: узнаем, к какому источнику относится категория
+        // узнаем, к какому источнику относится категория
         // Для этого смотрим на самую свежую статью в этой категории
         sourceCategories.Clear();
         orphanCategories.Clear();
@@ -177,7 +175,7 @@
             }
         }
 
-        // 4. Загружаем интересы пользователя
+        // Загружаем интересы пользователя
         if (!string.IsNullOrEmpty(currentUserId))
         {
             myInterestIds = (await context.UserInterests
@@ -208,8 +206,6 @@
         }
 
         await context.SaveChangesAsync();
-        // Не перезагружаем все данные полностью, чтобы аккордеон не захлопнулся
-        // Просто обновляем ID в памяти
         if (check) myInterestIds.Add(catId);
         else myInterestIds.Remove(catId);
     }
