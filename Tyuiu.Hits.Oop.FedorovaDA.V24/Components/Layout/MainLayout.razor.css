@@ -1,15 +1,21 @@
 .page {
     position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row; /* Строго в ряд! */
+    height: 100vh;
+    width: 100%;
+    overflow: hidden; /* Чтобы не было двойных скроллов */
 }
 
 main {
-    flex: 1;
+    flex-grow: 1; /* ВАЖНО: Занимает ВСЁ оставшееся место */
+    overflow-y: auto; /* Скролл только внутри контента */
+    height: 100vh;
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    width: auto;
+    background-color: #121212;
 }
 
 .top-row {

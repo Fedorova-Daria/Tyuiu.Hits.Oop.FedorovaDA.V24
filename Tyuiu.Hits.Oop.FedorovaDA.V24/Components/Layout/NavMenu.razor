@@ -1,48 +1,66 @@
 ﻿@implements IDisposable
-
 @inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
+<div class="nav-menu-container @(collapseNavMenu ? "collapsed" : "")">
+<!-- Верхняя шапка меню с кнопкой сворачивания -->
 <div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Tyuiu.Hits.Oop.FedorovaDA.V24</a>
+    <div class="container-fluid d-flex align-items-center">
+        <!-- Название или Логотип (скрываем при сворачивании) -->
+            <a class="navbar-brand" href="">News</a>
+
+        <!-- Кнопка гамбургер для сворачивания/разворачивания -->
+            <button title="Меню" class="navbar-toggler-custom" @onclick="ToggleNavMenu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z" />
+                </svg>
+            </button>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+<!-- Само меню -->
+<div class="@NavMenuCssClass nav-scrollable">
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="bi bi-house-door-fill" aria-hidden="true"></span>
+                <span class="nav-text @(collapseNavMenu ? "d-none" : "")">Главная</span>
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="settings">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Settings
+                <span class="bi bi-gear-fill" aria-hidden="true"></span>
+                <span class="nav-text @(collapseNavMenu ? "d-none" : "")">Настройки</span>
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="auth">
-                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
+                <span class="bi bi-lock-fill" aria-hidden="true"></span>
+                <span class="nav-text @(collapseNavMenu ? "d-none" : "")">Доступ</span>
             </NavLink>
         </div>
+
+        <div class="dropdown-divider border-secondary my-2"></div>
 
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                        <span class="bi bi-person-circle" aria-hidden="true"></span>
+                        <span class="nav-text @(collapseNavMenu ? "d-none" : "")">@context.User.Identity?.Name</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+
+                        <!-- Используем класс btn-link-reset, чтобы кнопка выглядела как ссылка -->
+                        <button type="submit" class="nav-link w-100 text-start btn-link-reset">
+                            <span class="bi bi-box-arrow-left" aria-hidden="true"></span>
+                            <span class="nav-text @(collapseNavMenu ? "d-none" : "")">Выйти</span>
                         </button>
                     </form>
                 </div>
@@ -50,21 +68,32 @@
             <NotAuthorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
+                        <span class="bi bi-person-plus" aria-hidden="true"></span>
+                        <span class="nav-text @(collapseNavMenu ? "d-none" : "")">Регистрация</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span>
+                        <span class="nav-text @(collapseNavMenu ? "d-none" : "")">Войти</span>
                     </NavLink>
                 </div>
             </NotAuthorized>
         </AuthorizeView>
     </nav>
 </div>
-
+</div>
 @code {
+    private bool collapseNavMenu = false; // По умолчанию меню открыто
     private string? currentUrl;
+
+    // Этот класс меняет ширину меню в CSS
+    private string NavMenuCssClass => collapseNavMenu ? "collapse-menu" : "";
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
 
     protected override void OnInitialized()
     {
@@ -83,4 +112,3 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
-
