@@ -46,27 +46,24 @@ namespace NewsAggregator.Services
                         if (await context.Articles.AnyAsync(a => a.Link == item.Links[0].Uri.ToString()))
                             continue;
 
-                        // 1. Пытаемся вытащить название категории из RSS
-                        // Обычно оно лежит в item.Categories[0].Name
+                        // Пытаемся вытащить название категории из RSS
                         string catName = "Общее"; // Дефолтная категория
 
-                        // 1. Пробуем стандартный ategory>
+                        // Пробуем стандартный сategory>
                         if (item.Categories.Count > 0)
                         {
                             catName = item.Categories.First().Name;
                         }
-                        // 2. Если пусто, пробуем вытащить из <dc:subject> (некоторые RSS прячут темы там)
+                        // Если пусто, пробуем вытащить из <dc:subject> (некоторые RSS прячут темы там)
                         else if (item.ElementExtensions.Any(e => e.OuterName == "subject"))
                         {
-                            // Это сложнее парсить, пропустим для простоты, 
-                            // но можно просто присвоить имя источника как категорию
                             catName = source.Name;
                         }
 
-                        // Если категория пустая или null — ставим заглушку
+                        // Если категория пустая или null
                         if (string.IsNullOrWhiteSpace(catName)) catName = "Без рубрики";
 
-                        // 2. Ищем такую категорию в базе или создаем новую
+                        // Ищем такую категорию в базе или создаем новую
                         var category = dbCategories.FirstOrDefault(c => c.Name == catName);
                         if (category == null)
                         {
@@ -100,7 +97,6 @@ namespace NewsAggregator.Services
             }
             await context.SaveChangesAsync();
 
-            // Уведомляем подписчиков (наш UI), что новости обновились
             OnNewsUpdated?.Invoke();
         }
     }

@@ -18,10 +18,9 @@
 <div class="container-fluid">
     <div class="row">
         
-        <!-- ЛЕВАЯ КОЛОНКА: Меню -->
+        <!-- Меню -->
         <div class="col-md-3 mb-4">
             <div class="sticky-sidebar">
-                <!-- Основные разделы -->
                 <div class="list-group mb-4 shadow-sm">
                     <button class="list-group-item list-group-item-action fw-bold @(currentMode == FeedMode.MyFeed ? "active" : "")" 
                             @onclick="() => SetMode(FeedMode.MyFeed)">
@@ -37,7 +36,6 @@
                     </button>
                 </div>
 
-                <!-- Блок Источников -->
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-light fw-bold text-uppercase small text-muted">
                         Источники
@@ -56,7 +54,7 @@
             </div>
         </div>
 
-        <!-- ПРАВАЯ КОЛОНКА: Лента новостей -->
+        <!-- Лента новостей -->
         <div class="col-md-9">
             
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -96,7 +94,6 @@
                         bool isRead = readArticleIds.Contains(item.Id);
 
                         <div class="col-md-12 mb-4">
-                            <!-- Добавляем прозрачность, если прочитано -->
                             <div class="card h-100 shadow-sm @(isRead ? "opacity-75 bg-light" : "")" style="transition: opacity 0.3s;">
                                 <div class="row g-0">
                                     @if (!string.IsNullOrEmpty(imgUrl))
@@ -110,7 +107,6 @@
                                         <div class="card-body">
                                             <div class="d-flex justify-content-between">
                                                 <h5 class="card-title">
-                                                    <!-- При клике помечаем как прочитанное -->
                                                     <a href="@item.Link" target="_blank" 
                                                        class="text-decoration-none @(isRead ? "text-secondary" : "text-dark fw-bold")"
                                                        @onclick="() => MarkAsRead(item.Id)">
@@ -118,11 +114,9 @@
                                                     </a>
                                                 </h5>
                                                 
-                                                <!-- КНОПКА ЗАКЛАДКИ -->
                                                 <button class="btn-bookmark ms-3 @(isBookmarked ? "active" : "")" 
                                                         @onclick="() => ToggleBookmark(item.Id)"
                                                         title="@(isBookmarked ? "Убрать из избранного" : "В избранное")">
-                                                    <!-- SVG иконка звезды -->
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-star-fill" viewBox="0 0 16 16">
                                                       <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
                                                     </svg>
@@ -193,7 +187,6 @@
                     }
                     else
                     {
-                        <!-- СЕТКА: 2 колонки на мобильном, 3 на компьютере -->
                         <div class="row row-cols-2 row-cols-md-3 g-2">
                             @foreach (var cat in categoriesForModal)
                             {
@@ -218,14 +211,14 @@
 }
 
 @code {
-    private enum FeedMode { MyFeed, AllNews, BySource, ByCategory, Favorites } // Добавили Favorites
+    private enum FeedMode { MyFeed, AllNews, BySource, ByCategory, Favorites }
 
     private FeedMode currentMode = FeedMode.MyFeed;
     private List<Article> articles;
     private List<Source> sources = new();
     private List<Category> allCategories = new();
     
-    // --- НОВЫЕ ХЭШ-СЕТЫ ---
+    // --- ХЭШ-СЕТЫ ---
     private HashSet<int> bookmarkedArticleIds = new();
     private HashSet<int> readArticleIds = new();
 
@@ -255,17 +248,12 @@
     categoriesForModal.Clear();
     using var context = DbFactory.CreateDbContext();
 
-    // 1. ПРИНУДИТЕЛЬНО грузим категории заново (вдруг контекст старый)
     var allCats = await context.Categories.AsNoTracking().OrderBy(c => c.Name).ToListAsync();
 
-    // Проверка-дебаг: если категорий вообще нет в базе
     if (allCats.Count == 0)
     {
         Console.WriteLine("ВНИМАНИЕ: Таблица Categories пуста!"); 
-        // Тут можно добавить фейковую категорию для теста, если хочешь
-        // allCats.Add(new Category { Id = 1, Name = "Тестовая категория" });
     }
-        // 2. Фильтруем список в зависимости от режима
         if (currentMode == FeedMode.MyFeed)
         {
             // В "Моей ленте" показываем только то, на что подписан юзер
@@ -273,8 +261,6 @@
         }
         else if (currentMode == FeedMode.BySource)
         {
-            // В режиме источника - ищем категории, связанные с этим источником
-            // Используем простой запрос, чтобы не грузить базу
             var sourceCatIds = await context.Articles
                 .Where(a => a.SourceId == selectedSourceId && a.CategoryId.HasValue)
                 .Select(a => a.CategoryId.Value)
@@ -285,7 +271,6 @@
         }
         else if (currentMode == FeedMode.Favorites)
         {
-             // В избранном - категории из закладок
              var favCatIds = await context.Articles
                 .Where(a => bookmarkedArticleIds.Contains(a.Id) && a.CategoryId.HasValue)
                 .Select(a => a.CategoryId.Value)
@@ -296,8 +281,6 @@
         }
         else 
         {
-            // Режим "Все новости" (или любой другой) -> ПОКАЗЫВАЕМ ВСЁ
-            // Но только те, в которых есть хоть какие-то статьи (чтобы не показывать мусор)
             var activeCatIds = await context.Articles
                 .Where(a => a.CategoryId.HasValue)
                 .Select(a => a.CategoryId.Value)
@@ -306,7 +289,6 @@
             
             categoriesForModal = allCats.Where(c => activeCatIds.Contains(c.Id)).ToList();
             
-            // Если база пустая, покажем вообще все (на всякий случай)
             if (categoriesForModal.Count == 0) categoriesForModal = allCats;
         }
 
@@ -327,7 +309,6 @@
                 .ToListAsync())
                 .ToHashSet();
 
-            // Загружаем закладки и историю прочитанного
             bookmarkedArticleIds = (await context.UserBookmarks
                 .Where(b => b.UserId == currentUserId)
                 .Select(b => b.ArticleId)
@@ -368,14 +349,13 @@
     // --- ЛОГИКА ПРОЧИТАННОГО ---
     private async Task MarkAsRead(int articleId)
     {
-        // Если уже прочитано - ничего не делаем, чтобы не грузить базу
         if (readArticleIds.Contains(articleId)) return;
 
         using var context = DbFactory.CreateDbContext();
         context.UserReadHistory.Add(new UserReadHistory { UserId = currentUserId, ArticleId = articleId });
         await context.SaveChangesAsync();
         
-        readArticleIds.Add(articleId); // Обновляем UI мгновенно
+        readArticleIds.Add(articleId);
     }
 
     private async Task SetMode(FeedMode mode)
@@ -470,16 +450,16 @@
         border: none;
         background: none;
         transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        color: #ccc; /* Цвет пустой звезды */
+        color: #ccc; 
     }
     
     .btn-bookmark:hover {
-        transform: scale(1.2); /* Увеличение при наведении */
-        color: #ffc107; /* Желтый при наведении */
+        transform: scale(1.2); 
+        color: #ffc107;
     }
 
     .btn-bookmark.active {
-        color: #ffc107; /* Желтый, когда активно */
+        color: #ffc107; 
         transform: scale(1.1);
     }
     
@@ -493,7 +473,7 @@
         position: sticky;
         top: 20px;
         max-height: calc(100vh - 40px);
-        overflow-y: auto; /* Скролл внутри меню, если источников много */
+        overflow-y: auto;
     }
 
     /* Стили для модального окна */

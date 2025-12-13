@@ -1,8 +1,9 @@
-﻿namespace NewsAggregator.Models
+﻿using Tyuiu.Hits.Oop.FedorovaDA.V24.Models;
+
+namespace NewsAggregator.Models
 {
-    public class Article
+    public class Article : BaseEntity
     {
-        public int Id { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
         public string Link { get; set; }
